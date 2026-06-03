@@ -18,7 +18,7 @@ The **API Gateway** intercepts all incoming traffic from the frontend applicatio
 
 ### 🔷 System Flow Diagram
 
-![API Gateway Architecture](./Diagram/api_gateway_architecture.png)
+![API Gateway Architecture](./Diagram/API_Gateway_Diagram.png)
 
 ---
 
