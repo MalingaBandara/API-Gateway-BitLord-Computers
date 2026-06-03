@@ -1,0 +1,75 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/orders/**
+        - id: inventory-service
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/inventory/**
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notifications/**
+
+        # Auth service - public paths bypass JWT filter
+        - id: auth-service-public
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/register, /auth/login, /auth/refresh
+          filters:
+            - RemoveRequestHeader=Authorization
+
+        # Auth service - protected paths require JWT
+        - id: auth-service-protected
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:4B697368616E5365637265744B6579466F724269746C6F726441707032303236}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9412/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
