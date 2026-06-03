@@ -6,7 +6,7 @@
 ## 📖 Overview
 The **API Gateway** intercepts all incoming traffic from the frontend application. It leverages the Eureka Server to dynamically route requests to the correct backend service instances. Additionally, it implements a security filter chain to validate JWTs on protected routes before allowing requests into the internal network.
 
-[⬅️ Back to Main Repository](https://github.com/yourusername/bitlord-computer-parts)
+[⬅️ Back to Main Repository](https://github.com/MalingaBandara/Bitlord-Computer-Parts)
 
 ## 🛠️ Tech Stack
 - **Language**: Java 17
@@ -15,6 +15,12 @@ The **API Gateway** intercepts all incoming traffic from the frontend applicatio
 - **Security**: JWT Validation Filters
 - **Service Discovery**: Netflix Eureka Client
 - **Observability**: Prometheus, Micrometer, Zipkin
+
+### 🔷 System Flow Diagram
+
+![API Gateway Architecture](./Diagram/api_gateway_architecture.png)
+
+---
 
 ## 🛣️ Routing Configuration
 The Gateway resolves routes dynamically using service names registered in Eureka:
