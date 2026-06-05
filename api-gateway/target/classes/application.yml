@@ -1,75 +1,109 @@
+# ─────────────────────────────────────────────
+# API Gateway — application.yml
+# Entry point for all microservice traffic.
+# Handles routing, CORS, JWT config, and tracing.
+# ─────────────────────────────────────────────
+
 server:
-  port: 8080
+  port: 8080  # API Gateway runs on port 8080 — all client requests come here first
 
 spring:
   application:
-    name: api-gateway
+    name: api-gateway  # Service name registered in Eureka service registry
+
   cloud:
     gateway:
+
       discovery:
         locator:
-          enabled: true
+          enabled: true  # Auto-discovers services registered in Eureka — no need to hardcode URIs
+
+      # ── CORS Configuration ──────────────────────────────────────────
+      # Allows the React frontend (Vite dev server) to make cross-origin
+      # requests to the gateway without being blocked by the browser.
       globalcors:
         corsConfigurations:
-          '[/**]':
+          '[/**]':                              # Apply CORS rules to all routes
             allowedOrigins:
-              - "http://localhost:5173"
+              - "http://localhost:5173"         # React frontend origin (Vite default port)
             allowedMethods:
               - GET
               - POST
               - PUT
               - PATCH
               - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
-            allowCredentials: true
+              - OPTIONS                         # OPTIONS is required for CORS preflight requests
+            allowedHeaders: "*"                 # Allow all request headers (e.g. Authorization, Content-Type)
+            allowCredentials: true              # Allow cookies and auth headers to be sent with requests
+
+      # ── Route Definitions ───────────────────────────────────────────
+      # Each route maps a URL path pattern to the correct downstream microservice.
+      # 'lb://' means load-balanced — routes through Eureka to the service instance.
       routes:
+
+        # Routes /api/orders/** requests to the Order Service
         - id: order-service
           uri: lb://ORDER-SERVICE
           predicates:
             - Path=/api/orders/**
+
+        # Routes /api/inventory/** requests to the Inventory Service
         - id: inventory-service
           uri: lb://INVENTORY-SERVICE
           predicates:
             - Path=/api/inventory/**
+
+        # Routes /api/notifications/** requests to the Notification Service
         - id: notification-service
           uri: lb://NOTIFICATION-SERVICE
           predicates:
             - Path=/api/notifications/**
 
-        # Auth service - public paths bypass JWT filter
+        # Auth service — PUBLIC paths (register, login, refresh)
+        # These routes bypass the JWT filter in JwtAuthFilter
+        # The Authorization header is stripped to prevent token leakage on public endpoints
         - id: auth-service-public
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/register, /auth/login, /auth/refresh
           filters:
-            - RemoveRequestHeader=Authorization
+            - RemoveRequestHeader=Authorization  # Strip Authorization header — not needed for public auth endpoints
 
-        # Auth service - protected paths require JWT
+        # Auth service — PROTECTED paths (everything else under /auth/**)
+        # These routes require a valid JWT token (validated by JwtAuthFilter)
         - id: auth-service-protected
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
 
+# ── JWT Secret ────────────────────────────────────────────────────────
+# Secret key used by JwtUtil to verify token signatures.
+# Reads from JWT_SECRET environment variable — falls back to the default hex string if not set.
+# In production, always set JWT_SECRET as an environment variable — never hardcode it.
 app:
   jwt:
     secret: ${JWT_SECRET:4B697368616E5365637265744B6579466F724269746C6F726441707032303236}
 
+# ── Eureka Service Registry ───────────────────────────────────────────
+# Registers this gateway with Eureka so it can discover other services by name.
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/  # Eureka server location
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: true  # Register using IP address instead of hostname (more reliable in Docker/local)
 
+# ── Observability & Monitoring ────────────────────────────────────────
 management:
   tracing:
     sampling:
-      probability: 1.0
+      probability: 1.0  # Trace 100% of requests — good for dev; reduce in production to avoid overhead
+
   zipkin:
     tracing:
-      endpoint: http://localhost:9412/api/v2/spans
+      endpoint: http://localhost:9412/api/v2/spans  # Zipkin server endpoint for distributed trace collection
+
   endpoints:
     web:
       exposure:
-        include: health, info, prometheus, metrics
+        include: health, info, prometheus, metrics  # Expose these actuator endpoints for health checks and monitoring
